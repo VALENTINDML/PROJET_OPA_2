@@ -78,6 +78,8 @@ model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 print(classification_report(y_test, y_pred))
 
+os.makedirs("./models", exist_ok=True)
+
 # Sauvegarde du modèle
 joblib.dump(model, "./models/model.pkl")
 print("✅ Modèle sauvegardé sous models/model.pkl")
