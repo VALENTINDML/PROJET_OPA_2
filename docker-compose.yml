@@ -145,6 +145,6 @@ services:
       POSTGRES_PORT: "5432"
     volumes:
       - ./models:/app/models
-    restart: "no"
+    restart: on-failure
     
 

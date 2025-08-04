@@ -10,7 +10,7 @@ st.markdown("Prédictions en temps réel à partir du modèle ML via WebSocket B
 
 placeholder = st.empty()
 
-api_url = os.environ.get("API_URL", "http://localhost:8000/predict/")
+API_URL = os.environ.get("API_URL", "http://34.246.202.63:8000/predict/")
 
 #API_URL = "http://localhost:8000/predict/"  # adapte si ton FastAPI est ailleurs
 

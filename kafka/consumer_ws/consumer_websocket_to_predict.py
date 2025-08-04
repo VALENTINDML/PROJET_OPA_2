@@ -6,6 +6,10 @@ import threading
 import psycopg2
 import os
 import time
+import sklearn
+import joblib
+import pandas as pd
+import datetime
 
 KAFKA_BOOTSTRAP_SERVERS = os.environ.get("KAFKA_SERVER", "kafka:9092")
 KAFKA_TOPIC = os.environ.get("KAFKA_TOPIC", "Binance_ohlcv_5m") 
@@ -62,6 +66,7 @@ def create_table():
 
 # Sauvegarde des prédictions
 def save_prediction(timestamp, prediction, proba):
+    timestamp = datetime.datetime.fromtimestamp(int(timestamp) / 1000)
     conn = wait_for_postgres()
     with conn.cursor() as cur:
         cur.execute("""
@@ -93,9 +98,13 @@ while not os.path.exists(model_path):
     print(f"Le modèle {model_path} n'est pas encore disponible, attente 5s...")
     time.sleep(5)
 
-with open(model_path, "rb") as f:
-    model = pickle.load(f)
+model = joblib.load(model_path)
 print("Modèle chargé avec succès.")
+
+#with open(model_path, "rb") as f:
+#    model = pickle.load(f)
+#print("Modèle chargé avec succès.")
+
 
 latest_prediction = {"prediction": None}
 
@@ -128,13 +137,13 @@ def listen_and_predict():
         if data.get("source") != "WebSocket":
             continue  # Ignore les bougies CCXT
 
-        features = np.array([[
-            float(data["open"]),
-            float(data["high"]),
-            float(data["low"]),
-            float(data["close"]),
-            float(data["volume"])
-        ]])
+        features = pd.DataFrame([{
+            "open": float(data["open"]),
+            "high": float(data["high"]),
+            "low": float(data["low"]),
+            "close": float(data["close"]),
+            "volume": float(data["volume"])
+            }])
 
         prediction = model.predict(features)[0]
         proba = model.predict_proba(features)[0][1]
@@ -146,4 +155,5 @@ def listen_and_predict():
         print(f"🧠 Prédiction temps réel : {prediction} Proba temps réel : {proba}" )
 
 
-
+if __name__ == "__main__":
+    listen_and_predict()

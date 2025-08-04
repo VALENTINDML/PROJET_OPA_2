@@ -7,6 +7,7 @@ from sklearn.metrics import classification_report
 import joblib
 import os
 import time
+import sklearn
 
 # Paramètres de connexion PostgreSQL
 POSTGRES_DB = os.environ.get("POSTGRES_DB", "binance_data")
