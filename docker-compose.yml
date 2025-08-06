@@ -5,9 +5,9 @@ services:
     image: postgres:16-alpine
     restart: on-failure
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: binance_data
+      POSTGRES_USER: data
+      POSTGRES_PASSWORD: data
+      POSTGRES_DB: data
     ports:
       - "5432:5432"
   
@@ -17,8 +17,8 @@ services:
     image: dpage/pgadmin4
     restart: on-failure
     environment:
-      PGADMIN_DEFAULT_EMAIL: daniel@datascientest.com
-      PGADMIN_DEFAULT_PASSWORD: data_engineer
+      PGADMIN_DEFAULT_EMAIL: data@data.com
+      PGADMIN_DEFAULT_PASSWORD: data
     ports:
       - "5050:80"
     
@@ -42,11 +42,10 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_BROKER_ID: 1
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_CREATE_TOPIC: "Binance_ohlcv_5m:2:1"
+      #KAFKA_CREATE_TOPIC: "btc_usdt:2:1"
     restart: on-failure
 
-    #volumes:
-      #- /var/run/docker.sock:/var/run/docker.sock
+
   consumer_ccxt: 
     build:
       context: ./kafka/consumer_ccxt
@@ -54,13 +53,13 @@ services:
       - kafka
       - postgres
     environment:
-      POSTGRES_DB: binance_data
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: data
+      POSTGRES_USER: data
+      POSTGRES_PASSWORD: data
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
       KAFKA_SERVER: kafka:9092
-      KAFKA_TOPIC: Binance_ohlcv_5m
+      KAFKA_TOPIC: btc_usdt
     restart: on-failure
 
   consumer_ws: 
@@ -71,13 +70,13 @@ services:
       - postgres
       - train-model
     environment:
-      POSTGRES_DB: binance_data
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: data
+      POSTGRES_USER: data
+      POSTGRES_PASSWORD: data
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
       KAFKA_SERVER: kafka:9092
-      KAFKA_TOPIC: Binance_ohlcv_5m
+      KAFKA_TOPIC: btc_usdt
       API_URL: http://api:8000/predict/
     volumes:
       - ./models:/app/models
@@ -128,6 +127,8 @@ services:
       context: ./streamlit
     ports: 
      - "8501:8501"
+    env_file:
+     - .env 
     depends_on: 
       - fastapi
     restart: on-failure
@@ -138,9 +139,9 @@ services:
       - postgres
       - producer_ccxt
     environment:
-      POSTGRES_DB: binance_data
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: data
+      POSTGRES_USER: data
+      POSTGRES_PASSWORD: data
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
     volumes:

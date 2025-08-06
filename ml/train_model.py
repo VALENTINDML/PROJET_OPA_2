@@ -10,24 +10,11 @@ import time
 import sklearn
 
 # Paramètres de connexion PostgreSQL
-POSTGRES_DB = os.environ.get("POSTGRES_DB", "binance_data")
-POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
-POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "postgres")
-POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "localhost")
+POSTGRES_DB = os.environ.get("POSTGRES_DB", "data")
+POSTGRES_USER = os.environ.get("POSTGRES_USER", "data")
+POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "data")
+POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "postgres")
 POSTGRES_PORT = os.environ.get("POSTGRES_PORT", "5432")
-
-# Connexion PostgreSQL
-#conn = psycopg2.connect(
-#    dbname=POSTGRES_DB,
-#    user=POSTGRES_USER,
-#    password=POSTGRES_PASSWORD,
-#    host=POSTGRES_HOST,
-#    port=POSTGRES_PORT
-#)
-
-
-#max_retries = 10
-#retry_delay = 5  # secondes
 
 def wait_for_postgres():
     for i in range(10):
@@ -49,7 +36,7 @@ def wait_for_postgres():
 conn = wait_for_postgres()
 
 # Lecture des données
-df = pd.read_sql("SELECT * FROM binance_ohlcv_5m ORDER BY timestamp ASC", conn)
+df = pd.read_sql("SELECT * FROM ccxt_ohlcv ORDER BY timestamp ASC", conn)
 conn.close()
 
 # Transformation du timestamp
@@ -59,15 +46,24 @@ df['timestamp'] = pd.to_datetime(df['timestamp'] , unit ="ms")
 df['future_close'] = df['close'].shift(-1)
 df['target'] = (df['future_close'] > df['close']).astype(int)
 
+"""df['close'] contient les prix de clôture actuels pour chaque période.
+La méthode .shift(-1) décale la colonne vers le haut d'une ligne, donc pour chaque ligne, future_close contient le prix de clôture de la période suivante.
+
+La colonne target sera la variable à prédire , 
+Elle compare si le prix de clôture futur (future_close) est plus grand que le prix de clôture actuel (close).
+
+Le modele vise à prédire si le prix va augmenter ou non dans la prochaine timelaps de 5min 
+et donc déclencher un achat ou non """
+
 # Suppression des dernières lignes sans target
 df.dropna(inplace=True)
 
-# Caractéristiques d’entrée
+# Caractéristiques d'entrée d'entrainement du modèle
 features = ['open', 'high', 'low', 'close', 'volume']
 X = df[features]
 y = df['target']
 
-# Split train/test
+# Split train/test 80/20
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # Entraînement du modèle
@@ -82,5 +78,5 @@ os.makedirs("./models", exist_ok=True)
 
 # Sauvegarde du modèle
 joblib.dump(model, "./models/model.pkl")
-print("✅ Modèle sauvegardé sous models/model.pkl")
+print("Modèle sauvegardé sous models/model.pkl")
 

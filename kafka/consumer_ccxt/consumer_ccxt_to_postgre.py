@@ -6,15 +6,15 @@ from kafka import KafkaConsumer
 from kafka.errors import NoBrokersAvailable
 import os
 
-# Chargement des variables d’environnement
-POSTGRES_DB = os.environ.get("POSTGRES_DB", "binance_data")
-POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
-POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "postgres")
+# Chargement des variables d'enrironnement 
+POSTGRES_DB = os.environ.get("POSTGRES_DB", "data")
+POSTGRES_USER = os.environ.get("POSTGRES_USER", "data")
+POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "data")
 POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "postgres") 
 POSTGRES_PORT = os.environ.get("POSTGRES_PORT", "5432")
 
 KAFKA_BOOTSTRAP_SERVERS = os.environ.get("KAFKA_SERVER", "kafka:9092")
-KAFKA_TOPIC = os.environ.get("KAFKA_TOPIC", "Binance_ohlcv_5m") 
+KAFKA_TOPIC = os.environ.get("KAFKA_TOPIC", "btc_usdt") 
 
 # Connexion PostgreSQL avec retry
 def wait_for_postgres():
@@ -43,7 +43,7 @@ def wait_for_kafka():
                 bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
                 value_deserializer=lambda m: json.loads(m.decode('utf-8')),
                 auto_offset_reset='earliest',
-                group_id='binance-consumer-ohlcv-5m'
+                group_id='binance-consumer'
             )
             print("Connexion Kafka réussie.")
             return consumer
@@ -57,9 +57,9 @@ conn = wait_for_postgres()
 cur = conn.cursor()
 consumer = wait_for_kafka()
 
-# Création de la table pour les bougies
+# Création de la table pour les bougies de ccxt
 cur.execute("""
-    CREATE TABLE IF NOT EXISTS binance_ohlcv_5m (
+    CREATE TABLE IF NOT EXISTS ccxt_ohlcv (
         timestamp TIMESTAMP PRIMARY KEY,
         symbol TEXT,
         timeframe TEXT,
@@ -75,12 +75,12 @@ conn.commit()
 
 print("Consumer OHLCV démarré et prêt à consommer.")
 
-# Fonction d'insertion d’une bougie
+# Fonction d'insertion d'une bougie
 def insert_candle(data):
     try:
         timestamp = datetime.datetime.fromtimestamp(int(data["timestamp"]) / 1000)
         cur.execute("""
-            INSERT INTO binance_ohlcv_5m (timestamp, symbol, timeframe, open, high, low, close, volume, source)
+            INSERT INTO ccxt_ohlcv (timestamp, symbol, timeframe, open, high, low, close, volume, source)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (timestamp) DO NOTHING
         """, (
@@ -92,7 +92,7 @@ def insert_candle(data):
             float(data["low"]),
             float(data["close"]),
             float(data["volume"]),
-            data.get("source" , "unknown") ######### RAJOUT POUR CLASSER PAR SOURCE DE DONNEE
+            data.get("source" , "ccxt") ######### RAJOUT POUR CLASSER PAR SOURCE DE DONNEE
         ))
         conn.commit()
         print(f"Bougie insérée à {timestamp}")
@@ -101,4 +101,7 @@ def insert_candle(data):
 
 # Boucle de consommation
 for message in consumer:
-    insert_candle(message.value)
+    data = message.value
+    if data.get("source") != "ccxt":
+        continue
+    insert_candle(data)
